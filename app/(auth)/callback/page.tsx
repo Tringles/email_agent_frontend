@@ -26,10 +26,15 @@ export default function CallbackPage() {
     }
 
     // If token is in URL, use it directly (backend redirected here)
+    // SECURITY: Token in URL is a security risk, but we handle it by:
+    // 1. Immediately extracting and storing it
+    // 2. Removing it from URL and browser history
     if (token && userId) {
-      console.log('Token received from URL redirect');
-      console.log('Token length:', token.length);
-      console.log('Setting token from URL...');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Token received from URL redirect');
+      }
+      
+      // Store token immediately
       setToken(token);
       
       // Get user info from URL params
@@ -48,27 +53,24 @@ export default function CallbackPage() {
         created_at: new Date().toISOString(),
       };
       
-      console.log('Setting user from URL:', user);
       setUser(user);
       
-      // Verify token is saved
+      // SECURITY: Remove token from URL and browser history
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('token');
+      newUrl.searchParams.delete('user_id');
+      newUrl.searchParams.delete('email');
+      newUrl.searchParams.delete('display_name');
+      newUrl.searchParams.delete('profile_image_url');
+      window.history.replaceState({}, '', newUrl.toString());
+      
+      // Verify token is saved and redirect
       setTimeout(() => {
-        const savedToken = localStorage.getItem('access_token');
-        const savedUser = localStorage.getItem('user');
         const authState = useAuthStore.getState();
-        console.log('Auth state after URL redirect:', {
-          isAuthenticated: authState.isAuthenticated,
-          hasUser: !!authState.user,
-          hasToken: !!savedToken,
-          tokenLength: savedToken?.length,
-          savedUser: savedUser ? 'exists' : 'null'
-        });
         
         if (authState.isAuthenticated) {
-          console.log('Redirecting to /inbox...');
           router.push('/inbox');
         } else {
-          console.error('Authentication failed after URL redirect');
           setError('인증 상태 설정에 실패했습니다.');
         }
       }, 100);
@@ -79,51 +81,39 @@ export default function CallbackPage() {
     if (code) {
       const handleCallback = async () => {
         try {
-          console.log('Starting callback handling with code...');
           const tokenData = await authApi.handleGoogleCallback(code);
-          console.log('Token data received:', { 
-            hasToken: !!tokenData.access_token, 
-            hasUser: !!tokenData.user,
-            tokenLength: tokenData.access_token?.length 
-          });
           
           if (tokenData.access_token) {
-            console.log('Setting token...');
             setToken(tokenData.access_token);
             
-            const savedToken = localStorage.getItem('access_token');
-            console.log('Token saved to localStorage:', !!savedToken, savedToken ? `Length: ${savedToken.length}` : 'null');
-            
             if (tokenData.user) {
-              console.log('Setting user:', tokenData.user);
               setUser(tokenData.user);
             } else {
-              console.log('No user data, checking auth...');
               checkAuth();
             }
             
+            // Remove code from URL for security
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('code');
+            newUrl.searchParams.delete('state');
+            window.history.replaceState({}, '', newUrl.toString());
+            
             setTimeout(() => {
               const authState = useAuthStore.getState();
-              console.log('Auth state after setting (delayed):', {
-                isAuthenticated: authState.isAuthenticated,
-                hasUser: !!authState.user,
-                hasToken: !!localStorage.getItem('access_token')
-              });
               
               if (authState.isAuthenticated) {
-                console.log('Redirecting to /inbox...');
                 router.push('/inbox');
               } else {
-                console.error('Authentication failed');
                 setError('인증 상태 설정에 실패했습니다.');
               }
             }, 300);
           } else {
-            console.error('No access token in response');
             setError('토큰을 받아오지 못했습니다.');
           }
         } catch (err: any) {
-          console.error('Callback error:', err);
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Callback error:', err);
+          }
           setError(err.response?.data?.detail || '로그인 처리 중 오류가 발생했습니다.');
         }
       };

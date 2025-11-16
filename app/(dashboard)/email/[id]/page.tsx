@@ -9,6 +9,7 @@ import { Star, Trash2, Archive, ArrowLeft, Download, Sparkles, Loader2, Shield, 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import DOMPurify from 'dompurify';
 
 export default function EmailDetailPage({
   params,
@@ -334,7 +335,15 @@ export default function EmailDetailPage({
           <h3 className="text-lg font-medium text-gray-900 mb-3">이메일 본문</h3>
           {email.body_html ? (
             <div
-              dangerouslySetInnerHTML={{ __html: email.body_html }}
+              dangerouslySetInnerHTML={{ 
+                __html: typeof window !== 'undefined' 
+                  ? DOMPurify.sanitize(email.body_html, {
+                      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code', 'img', 'div', 'span'],
+                      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'style'],
+                      ALLOW_DATA_ATTR: false,
+                    })
+                  : email.body_html
+              }}
               className="text-gray-700"
             />
           ) : (

@@ -57,7 +57,6 @@ class ApiClient {
   setToken(token: string): void {
     if (typeof window !== 'undefined') {
       localStorage.setItem('access_token', token);
-      console.log('Token saved to localStorage:', token ? 'Token exists' : 'Token is empty');
     }
   }
 
