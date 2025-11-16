@@ -30,7 +30,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: getInitialUser(),
   isAuthenticated: getInitialAuth(),
   setUser: (user) => {
-    console.log('setUser called:', user ? `User ID: ${user.id}` : 'null user');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('setUser called:', user ? `User ID: ${user.id}` : 'null user');
+    }
     if (typeof window !== 'undefined') {
       if (user) {
         localStorage.setItem('user', JSON.stringify(user));
@@ -40,18 +42,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     const hasToken = typeof window !== 'undefined' ? !!localStorage.getItem('access_token') : false;
     const isAuth = !!user && hasToken;
-    console.log('Setting user and auth state:', { hasUser: !!user, hasToken, isAuthenticated: isAuth });
     set({ user, isAuthenticated: isAuth });
   },
   setToken: (token) => {
-    console.log('setToken called:', token ? `Token length: ${token.length}` : 'Empty token');
     apiClient.setToken(token);
-    // token만 저장하고, isAuthenticated는 setUser에서 함께 설정하도록 함
-    // 또는 token이 있으면 일단 true로 설정 (user는 나중에 설정될 수 있음)
     const currentUser = get().user;
     const hasUser = currentUser !== null;
     const isAuth = !!token && hasUser;
-    console.log('Setting token auth state:', { hasToken: !!token, hasUser, isAuthenticated: isAuth });
     set({ isAuthenticated: isAuth });
   },
   logout: () => {
@@ -66,7 +63,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const hasToken = typeof window !== 'undefined' ? !!localStorage.getItem('access_token') : false;
     const user = getInitialUser();
     const isAuth = hasToken && !!user;
-    console.log('checkAuth called:', { hasToken, hasUser: !!user, isAuthenticated: isAuth });
     set({ user, isAuthenticated: isAuth });
   },
 }));
